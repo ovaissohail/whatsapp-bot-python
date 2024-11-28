@@ -4,24 +4,16 @@ import sys
 
 def get_ai_response(message):
     try:
-        # Clear any proxy settings
-        if 'http_proxy' in os.environ:
-            del os.environ['http_proxy']
-        if 'https_proxy' in os.environ:
-            del os.environ['https_proxy']
-        
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             print("ERROR: OPENAI_API_KEY not found", file=sys.stderr)
             return "Configuration error: API key not found"
 
-        # Create client with minimal configuration
-        client = OpenAI(
-            api_key=api_key
-        )
+        # Create client with only the required parameters
+        client = OpenAI()  # Let it use the environment variable directly
 
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o-mini",
             messages=[
                 {
                     "role": "user",
@@ -36,5 +28,8 @@ def get_ai_response(message):
         print(f"ERROR in get_ai_response: {error_msg}", file=sys.stderr)
         return f"Sorry, I encountered an error: {error_msg}"
 
+# Add a test function
 if __name__ == "__main__":
-    print(get_ai_response("Hello, how are you?"))
+    print("Testing AI response...")
+    response = get_ai_response("Test message")
+    print(f"Response: {response}")
