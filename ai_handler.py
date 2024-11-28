@@ -4,28 +4,30 @@ import sys
 
 def get_ai_response(message):
     try:
-        # Debug logging
+        # Clear any proxy settings
+        if 'http_proxy' in os.environ:
+            del os.environ['http_proxy']
+        if 'https_proxy' in os.environ:
+            del os.environ['https_proxy']
+        
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
-            print("ERROR: OPENAI_API_KEY not found in environment variables", file=sys.stderr)
+            print("ERROR: OPENAI_API_KEY not found", file=sys.stderr)
             return "Configuration error: API key not found"
 
-        # Initialize client with explicit configuration
+        # Create client with minimal configuration
         client = OpenAI(
-            api_key=api_key,
-            timeout=60.0  # Explicit timeout
+            api_key=api_key
         )
 
-        # Attempt API call
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4",
             messages=[
                 {
                     "role": "user",
                     "content": message
                 }
-            ],
-            max_tokens=30
+            ]
         )
         return response.choices[0].message.content
 
