@@ -1,4 +1,6 @@
 from flask import Flask, request, jsonify
+import os
+from ai_handler import get_ai_response
 
 app = Flask(__name__)
 
@@ -8,9 +10,11 @@ def process_message():
     phone_number = data.get('phone_number')
     message = data.get('message')
     
-    # Simple echo response for now
+    # Get AI response
+    ai_response = get_ai_response(message)
+    
     response = {
-        'reply': f'Echo from Python: {message}'
+        'reply': ai_response
     }
 
     return jsonify(response)
