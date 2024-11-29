@@ -1,0 +1,29 @@
+{
+  "+919876543210": {
+    "name": "Rahul",
+    "phone": "+919876543210",
+    "first_interaction": "2024-11-29T17:48:15.712358",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hello",
+        "timestamp": "2024-11-29T17:48:15.712358"
+      },
+      {
+        "role": "assistant",
+        "content": "Salam! Chaman Chutya yahan. Kese madad kar sakta hun apki?",
+        "timestamp": "2024-11-29T17:48:15.712358"
+      },
+      {
+        "role": "user",
+        "content": "Kya haal hai?",
+        "timestamp": "2024-11-29T17:48:17.483689"
+      },
+      {
+        "role": "assistant",
+        "content": "Shukar hai, sab kuch theak hai. Apka kya haal hai?",
+        "timestamp": "2024-11-29T17:48:17.483689"
+      }
+    ]
+  }
+}

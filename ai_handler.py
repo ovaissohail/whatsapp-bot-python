@@ -1,50 +1,110 @@
 from openai import OpenAI
 import os
-import sys
+import json
+from datetime import datetime
+from dotenv import load_dotenv
 
-def get_ai_response(message):
+load_dotenv()
+
+CONVERSATION_FILE = "conversations.json"
+
+def load_conversations():
     try:
-        api_key = os.getenv('OPENAI_API_KEY')
-        if not api_key:
-            print("ERROR: OPENAI_API_KEY not found", file=sys.stderr)
-            return "Configuration error: API key not found"
+        with open(CONVERSATION_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return {}
 
-        # Create client with only the required parameters
-        client = OpenAI()  # Let it use the environment variable directly
+def save_conversations(conversations):
+    with open(CONVERSATION_FILE, 'w') as f:
+        json.dump(conversations, f, indent=2)
+
+def init_conversation(phone_number, user_name, current_time):
+    return {
+        "name": user_name,
+        "phone": phone_number,
+        "first_interaction": current_time,
+        "messages": []
+    }
+
+def get_ai_response(message, phone_number, user_name="Unknown"):
+    # Load or initialize conversation
+    conversations = load_conversations()
+    current_time = datetime.now().isoformat()
+
+    # Initialize new user or ensure structure is correct
+    if phone_number not in conversations:
+        conversations[phone_number] = init_conversation(phone_number, user_name, current_time)
+    elif "messages" not in conversations[phone_number]:
+        old_data = conversations[phone_number]
+        conversations[phone_number] = init_conversation(phone_number, user_name, current_time)
+        if "messages" in old_data:
+            conversations[phone_number]["messages"] = old_data["messages"]
+
+    try:
+        client = OpenAI()
+        messages = [
+            {
+                "role": "system",
+                "content": "You will only respond to customers as chaman chutya. The response will be in the same language as the user's message. Mainly URDU. The response will be in 30 words or less."
+            }
+        ]
+
+        # Add last 10 messages for context
+        history = conversations[phone_number]["messages"]
+        for msg in history[-9:]:
+            messages.append({
+                "role": msg["role"],
+                "content": msg["content"]
+            })
+
+        messages.append({"role": "user", "content": message})
 
         response = client.chat.completions.create(
-            model="gpt-4o",
-
-            messages=[
-                {
-                    "role": "system",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": "You will only respond to customers as chaman chutya. The response will be in the same language as the user's message. Mainly URDU. The response will be in 30 words or less."
-                        }
-                    ]
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                        "type": "text",
-                        "text": message
-                    }
-                ]
-            }
-            ]
+            model="gpt-4",
+            messages=messages
         )
-        return response.choices[0].message.content
+        ai_response = response.choices[0].message.content
 
     except Exception as e:
-        error_msg = f"Error type: {type(e).__name__}, Details: {str(e)}"
-        print(f"ERROR in get_ai_response: {error_msg}", file=sys.stderr)
-        return f"Sorry, I encountered an error: {error_msg}"
+        ai_response = f"Error: {str(e)}"
 
-# Add a test function
+    # Save messages
+    conversations[phone_number]["messages"].append({
+        "role": "user",
+        "content": message,
+        "timestamp": current_time
+    })
+    conversations[phone_number]["messages"].append({
+        "role": "assistant",
+        "content": ai_response,
+        "timestamp": current_time
+    })
+
+    save_conversations(conversations)
+    return ai_response
+
 if __name__ == "__main__":
-    print("Testing AI response...")
-    response = get_ai_response("Test message")
-    print(f"Response: {response}")
+    # Clear the file for testing
+    if os.path.exists(CONVERSATION_FILE):
+        os.remove(CONVERSATION_FILE)
+    
+    phone = "+919876543210"
+    name = "Rahul"
+    
+    test_messages = ["Hello", "Kya haal hai?"]
+    
+    for msg in test_messages:
+        print(f"\nSending: {msg}")
+        response = get_ai_response(msg, phone, name)
+        print(f"Response: {response}")
+        
+        convos = load_conversations()
+        if phone in convos:
+            print(f"\nUser: {convos[phone]['name']} ({convos[phone]['phone']})")
+            print(f"First interaction: {convos[phone]['first_interaction']}")
+            print(f"Total messages: {len(convos[phone]['messages'])}")
+            print("\nLast few messages:")
+            for m in convos[phone]['messages'][-3:]:
+                time = datetime.fromisoformat(m['timestamp']).strftime('%Y-%m-%d %H:%M:%S')
+                print(f"[{time}] {m['role']}: {m['content']}")
