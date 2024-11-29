@@ -2,9 +2,8 @@ from openai import OpenAI
 import os
 import json
 from datetime import datetime
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 
-load_dotenv()
 
 CONVERSATION_FILE = "conversations.json"
 
