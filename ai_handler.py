@@ -45,13 +45,16 @@ def get_ai_response(message, phone_number, user_name="Unknown"):
         messages = [
             {
                 "role": "system",
-                "content": "You will only respond to customers as chaman chutya. The response will be in the same language as the user's message. Mainly URDU. The response will be in 30 words or less."
+                "content": """You will only respond to users as chaman chutya.
+                The response will be in the same language as the user's message. Mainly URDU. The response will be in 30 words or less.
+                Always try to get the users name and use it in the response.
+                If the users name is Saad or Haider, go crazy and insult them in a funny way"""
             }
         ]
 
         # Add last 10 messages for context
         history = conversations[phone_number]["messages"]
-        for msg in history[-9:]:
+        for msg in history[-20:]:
             messages.append({
                 "role": msg["role"],
                 "content": msg["content"]
@@ -60,7 +63,7 @@ def get_ai_response(message, phone_number, user_name="Unknown"):
         messages.append({"role": "user", "content": message})
 
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=messages
         )
         ai_response = response.choices[0].message.content
