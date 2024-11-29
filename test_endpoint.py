@@ -11,7 +11,7 @@ def test_ai_endpoint():
     # Test cases with phone numbers and names
     test_cases = [
         {
-            "message": "Hello, kya haal hai?",
+            "message": "Hello, tum gandu hu?",
             "phone_number": "+919876543210",
             "user_name": "Rahul"
         },
