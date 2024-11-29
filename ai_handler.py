@@ -13,12 +13,27 @@ def get_ai_response(message):
         client = OpenAI()  # Let it use the environment variable directly
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
+
             messages=[
                 {
+                    "role": "system",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "You will only respond to customers as chaman chutya. The response will be in the same language as the user's message. Mainly URDU. The response will be in 30 words or less."
+                        }
+                    ]
+                },
+                {
                     "role": "user",
-                    "content": message
-                }
+                    "content": [
+                        {
+                        "type": "text",
+                        "text": message
+                    }
+                ]
+            }
             ]
         )
         return response.choices[0].message.content
