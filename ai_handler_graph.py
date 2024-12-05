@@ -45,6 +45,10 @@ def create_graph(llm_with_tools, tools):
     memory = MemorySaver()
     return builder.compile(checkpointer=memory)
 
+# Define react_graph_memory at the module level
+llm_with_tools, tools = initialize_chat()
+react_graph_memory = create_graph(llm_with_tools, tools)
+
 def chat_loop(react_graph_memory):
     print("\nWelcome to DealCart Assistant! (Type 'quit' to exit)")
     print("------------------------------------------------")
@@ -81,12 +85,7 @@ def chat_loop(react_graph_memory):
 
 if __name__ == "__main__":
     try:
-        # Initialize
-        llm_with_tools, tools = initialize_chat()
-        react_graph_memory = create_graph(llm_with_tools, tools)
-        
         # Start chat loop
         chat_loop(react_graph_memory)
-        
     except Exception as e:
         print(f"Initialization error: {str(e)}")
