@@ -42,13 +42,17 @@ def get_conversation_messages(phone_number):
 
 # Initialize LLM and tools
 tools = [search_inventory]
-llm = ChatOpenAI(model="gpt-4o")
+llm = ChatOpenAI(model="gpt-4o-mini")
 llm_with_tools = llm.bind_tools(tools)
 
 # System message
 sys_msg = SystemMessage(content="""You are a helpful assistant tasked with searching DealCart inventory for products.
 ALWAYS use the search_inventory tool when users ask about any products or ordering items.
-Do not respond without using the tool first.""")
+
+If there is an item that is out of stock, search for an item that is similar and suggest it to the user. (for example all cooking oils are out of stock, then suggest ghee since it is similar)
+If lets say that item is also out of stock, then inform the user about both items and ask if they want to order any other items.
+                        
+                        .""")
 
 # Node
 def assistant(state: MessagesState):
@@ -79,6 +83,7 @@ def assistant(state: MessagesState):
                 "timestamp": datetime.now().isoformat()
             })
             
+            print(f"Saving conversations to: {os.path.abspath(CONVERSATION_FILE)}")
             save_conversations(conversations)
         
         return {"messages": [response], "thread_id": thread_id}
