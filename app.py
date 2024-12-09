@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
 import os
-import random
 from ai_handler_graph import react_graph_memory, HumanMessage
 
 app = Flask(__name__)
@@ -19,12 +18,11 @@ def process_message():
         
         if not message:
             return jsonify({'error': 'No message provided'}), 400
-            
-        # Generate a random thread ID
-        thread_id = str(random.randint(1, 1000000))
-        
-        # Configure the thread and create the message
-        config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 20}
+        if not phone_number:
+            return jsonify({'error': 'No phone number provided'}), 400
+                    
+        # Use phone_number as thread_id
+        config = {"configurable": {"thread_id": phone_number}, "recursion_limit": 20}
         messages = [HumanMessage(content=message)]
         
         # Get response using the graph

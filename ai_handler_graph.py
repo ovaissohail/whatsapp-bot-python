@@ -15,10 +15,8 @@ load_dotenv()
 
 def initialize_chat():
     openai_api_key = os.getenv("OPENAI_API_KEY")
-    #google_api_key = os.getenv("GOOGLE_API_KEY")
     tools = [search_inventory]
     llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
-    #llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", api_key=google_api_key)
     return llm.bind_tools(tools, parallel_tool_calls=False), tools
 
 def create_graph(llm_with_tools, tools):
@@ -41,51 +39,47 @@ def create_graph(llm_with_tools, tools):
     builder.add_conditional_edges("assistant", tools_condition)
     builder.add_edge("tools", "assistant")
     
-    # Compile the graph with memory
     memory = MemorySaver()
     return builder.compile(checkpointer=memory)
 
-# Define react_graph_memory at the module level
+# Initialize the graph
 llm_with_tools, tools = initialize_chat()
 react_graph_memory = create_graph(llm_with_tools, tools)
 
-def chat_loop(react_graph_memory):
-    print("\nWelcome to DealCart Assistant! (Type 'quit' to exit)")
-    print("------------------------------------------------")
-    
-    config = {"configurable": {"thread_id": "1"}, "recursion_limit": 20}
-    
-    while True:
-        # Get user input
-        user_input = input("\nYou: ").strip()
-        
-        # Check for quit command
-        if user_input.lower() in ['quit', 'exit', 'bye']:
-            print("\nThank you for using DealCart Assistant. Goodbye!")
-            break
-            
-        if not user_input:
-            continue
-            
-        try:
-            # Process user input
-            messages = [HumanMessage(content=user_input)]
-            response = react_graph_memory.invoke({"messages": messages}, config)
-            
-            # Print only the latest assistant's response
-            print("\nAssistant:", end=" ")
-            for message in reversed(response['messages']):
-                if not isinstance(message, HumanMessage):
-                    print(message.content)
-                    break
-                
-        except Exception as e:
-            print(f"\nError: Something went wrong - {str(e)}")
-            print("Please try again.")
-
 if __name__ == "__main__":
+    def chat_loop():
+        """Local testing function"""
+        print("\nWelcome to DealCart Assistant! (Type 'quit' to exit)")
+        print("------------------------------------------------")
+        
+        test_phone = "+923000000000"
+        config = {"configurable": {"thread_id": test_phone}, "recursion_limit": 20}
+        
+        while True:
+            user_input = input("\nYou: ").strip()
+            
+            if user_input.lower() in ['quit', 'exit', 'bye']:
+                print("\nThank you for using DealCart Assistant. Goodbye!")
+                break
+                
+            if not user_input:
+                continue
+                
+            try:
+                messages = [HumanMessage(content=user_input)]
+                response = react_graph_memory.invoke({"messages": messages}, config)
+                
+                print("\nAssistant:", end=" ")
+                for message in reversed(response['messages']):
+                    if not isinstance(message, HumanMessage):
+                        print(message.content)
+                        break
+                    
+            except Exception as e:
+                print(f"\nError: Something went wrong - {str(e)}")
+                print("Please try again.")
+
     try:
-        # Start chat loop
-        chat_loop(react_graph_memory)
+        chat_loop()
     except Exception as e:
         print(f"Initialization error: {str(e)}")
