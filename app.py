@@ -16,35 +16,33 @@ def process_message():
         data = request.json
         print(f"Received webhook data: {data}")
         
-        # Handle direct API calls
-        if 'phone_number' in data and 'message' in data:
-            phone_number = data['phone_number']
-            message = data['message']
-        # Handle WhatsApp webhook
-        elif 'entry' in data:
-            message_data = data['entry'][0]['changes'][0]['value']['messages'][0]
-            message_type = message_data.get('type')
-            phone_number = message_data.get('from')
+        # Extract basic info
+        phone_number = data.get('phone_number')
+        message_type = data.get('messageType')
+        
+        # Handle different message types
+        if message_type == 'text':
+            message = data.get('message', '')
+        elif message_type == 'audio':
+            audio_data = data.get('audioData', {})
+            audio_id = audio_data.get('id')
+            print(f"Processing voice note with ID: {audio_id}")
             
-            if message_type == 'text':
-                message = message_data['text']['body']
-            elif message_type == 'audio':
-                audio_id = message_data['audio']['id']
-                print(f"Processing voice note with ID: {audio_id}")
-                
-                # Download and transcribe
-                audio_file = download_voice_note(audio_id)
-                if audio_file:
-                    message = transcribe_voice_note(audio_file)
-                    print(f"Transcribed message: {message}")
-                    # Clean up temp file
-                    os.unlink(audio_file)
-                else:
-                    message = "[Error processing voice note]"
+            # Download and transcribe
+            audio_file = download_voice_note(audio_id)
+            if audio_file:
+                print(f"Voice note downloaded to: {audio_file}")
+                message = transcribe_voice_note(audio_file)
+                print(f"Transcription result: {message}")
+                # Clean up temp file
+                os.unlink(audio_file)
             else:
-                return jsonify({'error': 'Unsupported message type'}), 400
+                message = "[Error processing voice note]"
         else:
-            return jsonify({'error': 'Invalid request format'}), 400
+            return jsonify({'error': 'Unsupported message type'}), 400
+            
+        if not phone_number:
+            return jsonify({'error': 'Missing phone number'}), 400
             
         # Process with existing logic
         state = {
