@@ -55,33 +55,36 @@ def initialize_chat():
     return llm.bind_tools(tools, parallel_tool_calls=False), tools
 
 def assistant(state: MessagesState):
-    # Get thread_id from state
-    thread_id = state.get("configurable", {}).get("thread_id")
+    # Get config from the graph's context
+    config = state.get("configurable", {})
+    thread_id = config.get("thread_id")
+    user_name = config.get("user_name")
     
-    print(f"\nThread ID: {thread_id}")
+    print(f"\nProcessing message:")
+    print(f"Thread ID: {thread_id}")
+    print(f"User Name: {user_name}")
+    print(f"State: {state}")
+    
     if not thread_id:
-        print("State content:", state)  # Debug log
-        raise ValueError("No thread_id provided in state")
-        
+        raise ValueError(f"No thread_id in config: {config}")
+    
     conversations = load_conversations()
     
-    print(f"Incoming message: {state['messages']}")
-    
-    # Initialize conversation if it doesn't exist
+    # Initialize or get conversation
     if thread_id not in conversations:
-        conversations[thread_id] = {"messages": []}
+        conversations[thread_id] = {
+            "messages": [],
+            "user_name": user_name
+        }
     
     # Get historical messages
     historical_messages = conversations[thread_id]["messages"]
-    print(f"Historical messages for {thread_id}: {historical_messages}")
     
     # Combine historical messages with new message
     all_messages = historical_messages + state["messages"]
-    print(f"Combined messages: {all_messages}")
     
     # Get response from LLM
     response = llm_with_tools.invoke([sys_msg] + all_messages)
-    print(f"LLM Response: {response}")
     
     # Update conversation history
     conversations[thread_id]["messages"] = all_messages + [response]
