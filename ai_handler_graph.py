@@ -1,5 +1,4 @@
 from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
 from typing import Optional, Dict, Any
 from tools.dealcart_search import search_inventory
 from langgraph.graph import MessagesState
@@ -10,8 +9,23 @@ from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 from dotenv import load_dotenv
 import os
+import json
+from datetime import datetime
 
 load_dotenv()
+
+CONVERSATION_FILE = "graph_conversations.json"
+
+def load_conversations():
+    try:
+        with open(CONVERSATION_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_conversations(conversations):
+    with open(CONVERSATION_FILE, 'w') as f:
+        json.dump(conversations, f, indent=2)
 
 def initialize_chat():
     openai_api_key = os.getenv("OPENAI_API_KEY")
@@ -30,7 +44,25 @@ def create_graph(llm_with_tools, tools):
                         If you are looking for alternatives incase of unavailable inventory, try to use different search queries to ensure that you are not repeating the same search query""")
     
     def assistant(state: MessagesState):
-        return {"messages": [llm_with_tools.invoke([sys_msg] + state["messages"])]}
+        # Load conversation history for the thread_id
+        thread_id = state.get("configurable", {}).get("thread_id")
+        conversations = load_conversations()
+        
+        if thread_id in conversations:
+            # Add historical messages to the current state
+            historical_messages = conversations[thread_id].get("messages", [])
+            state["messages"].extend(historical_messages)
+        
+        response = {"messages": [llm_with_tools.invoke([sys_msg] + state["messages"])]}
+        
+        # Save the updated conversation
+        if thread_id:
+            if thread_id not in conversations:
+                conversations[thread_id] = {"messages": []}
+            conversations[thread_id]["messages"] = state["messages"] + response["messages"]
+            save_conversations(conversations)
+        
+        return response
 
     builder = StateGraph(MessagesState)
     builder.add_node("assistant", assistant)
@@ -48,7 +80,6 @@ react_graph_memory = create_graph(llm_with_tools, tools)
 
 if __name__ == "__main__":
     def chat_loop():
-        """Local testing function"""
         print("\nWelcome to DealCart Assistant! (Type 'quit' to exit)")
         print("------------------------------------------------")
         
