@@ -55,10 +55,15 @@ def initialize_chat():
     return llm.bind_tools(tools, parallel_tool_calls=False), tools
 
 def assistant(state: MessagesState):
+    # Get thread_id from state
     thread_id = state.get("configurable", {}).get("thread_id")
+    
+    print(f"\nThread ID: {thread_id}")  # Debug log
+    if not thread_id:
+        raise ValueError("No thread_id provided in state")
+        
     conversations = load_conversations()
     
-    print(f"\nThread ID: {thread_id}")
     print(f"Incoming message: {state['messages']}")
     
     # Initialize conversation if it doesn't exist
@@ -67,7 +72,7 @@ def assistant(state: MessagesState):
     
     # Get historical messages
     historical_messages = conversations[thread_id]["messages"]
-    print(f"Historical messages: {historical_messages}")
+    print(f"Historical messages for {thread_id}: {historical_messages}")
     
     # Combine historical messages with new message
     all_messages = historical_messages + state["messages"]

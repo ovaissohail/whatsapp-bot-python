@@ -21,12 +21,19 @@ def process_message():
         if not phone_number:
             return jsonify({'error': 'No phone number provided'}), 400
                     
-        # Use phone_number as thread_id
-        config = {"configurable": {"thread_id": phone_number}, "recursion_limit": 20}
-        messages = [HumanMessage(content=message)]
+        # Create the message state with the thread_id in the state itself
+        state = {
+            "messages": [HumanMessage(content=message)],
+            "configurable": {
+                "thread_id": phone_number,
+                "user_name": user_name
+            }
+        }
         
-        # Get response using the graph
-        response = react_graph_memory.invoke({"messages": messages}, config)
+        print(f"Processing request with state: {state}")  # Debug log
+        
+        # Pass the state directly
+        response = react_graph_memory.invoke(state)
         
         # Extract the assistant's response
         ai_response = ""
