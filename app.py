@@ -12,32 +12,35 @@ def home():
 @app.route('/process', methods=['POST'])
 def process_message():
     try:
-        # Handle either text message or voice note
-        if 'voice_note' in request.files:
-            voice_note = request.files['voice_note']
-            # Here we'll just get the content as text
-            message = "Voice note content here"  # This will be replaced with actual transcription
+        webhook_data = request.json
+        print(f"Received webhook data: {webhook_data}")
+        
+        # Extract message data
+        message_data = webhook_data['entry'][0]['changes'][0]['value']['messages'][0]
+        message_type = message_data.get('type')
+        phone_number = message_data.get('from')
+        
+        print(f"Message type: {message_type}")
+        print(f"Phone number: {phone_number}")
+        
+        # Get message content based on type
+        if message_type == 'text':
+            message = message_data['text']['body']
+        elif message_type == 'audio':
+            audio_id = message_data['audio']['id']
+            message = f"[Voice note ID: {audio_id}]"
         else:
-            message = request.json.get('message')
+            return jsonify({'error': 'Unsupported message type'}), 400
             
-        phone_number = request.json.get('phone_number')
-        user_name = request.json.get('user_name')
+        print(f"Message content: {message}")
         
-        if not message or not phone_number:
-            return jsonify({'error': 'Missing required fields'}), 400
-        
-        # Process normally with the message (whether from text or voice)
+        # Process with existing logic
         state = {
             "messages": get_conversation_messages(phone_number),
             "thread_id": phone_number
         }
         
         state["messages"].append(HumanMessage(content=message))
-        
-        print(f"\nProcessing request:")
-        print(f"Phone: {phone_number}")
-        print(f"Name: {user_name}")
-        print(f"Message: {message}")
         
         config = {"configurable": {"thread_id": phone_number}}
         response = react_graph_memory.invoke(state, config)
@@ -57,7 +60,6 @@ def process_message():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
-
 
 
     
