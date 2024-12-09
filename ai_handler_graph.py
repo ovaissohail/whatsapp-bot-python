@@ -42,7 +42,7 @@ def get_conversation_messages(phone_number):
 
 # Initialize LLM and tools
 tools = [search_inventory]
-llm = ChatOpenAI(model="gpt-4o-mini")
+llm = ChatOpenAI(model="gpt-4o")
 llm_with_tools = llm.bind_tools(tools)
 
 # System message
@@ -52,6 +52,10 @@ ALWAYS use the search_inventory tool when users ask about any products or orderi
 If there is an item that is out of stock, search for an item that is similar and suggest it to the user. (for example all cooking oils are out of stock, then suggest ghee since it is similar)
 If lets say that item is also out of stock, then inform the user about both items and ask if they want to order any other items.
                         
+The response will always be in the same language as the voice note. 
+It will never be hindi, if its urdu then respond in Roman Urdu.
+                        
+Choose the keywords for the search query very carefully, and make sure they are relevant. If its a generic request, then ask the user to be more specific. (for example if the user says oil, then ask them to be more specific like cooking oil, ghee, etc.)
                         .""")
 
 # Node
