@@ -58,8 +58,9 @@ def assistant(state: MessagesState):
     # Get thread_id from state
     thread_id = state.get("configurable", {}).get("thread_id")
     
-    print(f"\nThread ID: {thread_id}")  # Debug log
+    print(f"\nThread ID: {thread_id}")
     if not thread_id:
+        print("State content:", state)  # Debug log
         raise ValueError("No thread_id provided in state")
         
     conversations = load_conversations()
@@ -121,7 +122,13 @@ if __name__ == "__main__":
         print("------------------------------------------------")
         
         test_phone = "+923000000000"
-        config = {"configurable": {"thread_id": test_phone}, "recursion_limit": 20}
+        config = {
+            "configurable": {
+                "thread_id": test_phone,
+                "checkpoint_id": test_phone,
+                "checkpoint_ns": "dealcart"
+            }
+        }
         
         while True:
             user_input = input("\nYou: ").strip()

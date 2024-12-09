@@ -21,7 +21,7 @@ def process_message():
         if not phone_number:
             return jsonify({'error': 'No phone number provided'}), 400
                     
-        # Create the message state with the thread_id in the state itself
+        # Create both state and config with thread_id
         state = {
             "messages": [HumanMessage(content=message)],
             "configurable": {
@@ -30,10 +30,19 @@ def process_message():
             }
         }
         
-        print(f"Processing request with state: {state}")  # Debug log
+        config = {
+            "configurable": {
+                "thread_id": phone_number,
+                "checkpoint_id": phone_number,
+                "checkpoint_ns": "dealcart"
+            }
+        }
         
-        # Pass the state directly
-        response = react_graph_memory.invoke(state)
+        print(f"Processing request with state: {state}")
+        print(f"Config: {config}")
+        
+        # Pass both state and config
+        response = react_graph_memory.invoke(state, config)
         
         # Extract the assistant's response
         ai_response = ""
