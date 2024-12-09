@@ -12,39 +12,32 @@ def home():
 @app.route('/process', methods=['POST'])
 def process_message():
     try:
-        webhook_data = request.json
-        print(f"Received webhook data: {webhook_data}")  # Debug print
-        
-        # Get the message object
-        messages = webhook_data.get('entry', [{}])[0].get('changes', [{}])[0].get('value', {}).get('messages', [{}])[0]
-        
-        # Determine message type
-        message_type = messages.get('type')
-        print(f"Message type: {message_type}")  # Debug print
-        
-        # Extract message content based on type
-        if message_type == 'text':
-            message = messages.get('text', {}).get('body', '')
-        elif message_type == 'audio':
-            message = "[Voice Note]"  # Placeholder for now
+        # Handle either text message or voice note
+        if 'voice_note' in request.files:
+            voice_note = request.files['voice_note']
+            # Here we'll just get the content as text
+            message = "Voice note content here"  # This will be replaced with actual transcription
         else:
-            message = f"[Unsupported message type: {message_type}]"
+            message = request.json.get('message')
             
-        # Get user details
-        phone_number = messages.get('from')
-        contacts = webhook_data.get('entry', [{}])[0].get('changes', [{}])[0].get('value', {}).get('contacts', [{}])[0]
-        user_name = contacts.get('profile', {}).get('name')
+        phone_number = request.json.get('phone_number')
+        user_name = request.json.get('user_name')
         
-        if not phone_number:
-            return jsonify({'error': 'Missing phone number'}), 400
-            
-        # Process with existing logic
+        if not message or not phone_number:
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Process normally with the message (whether from text or voice)
         state = {
             "messages": get_conversation_messages(phone_number),
             "thread_id": phone_number
         }
         
         state["messages"].append(HumanMessage(content=message))
+        
+        print(f"\nProcessing request:")
+        print(f"Phone: {phone_number}")
+        print(f"Name: {user_name}")
+        print(f"Message: {message}")
         
         config = {"configurable": {"thread_id": phone_number}}
         response = react_graph_memory.invoke(state, config)
