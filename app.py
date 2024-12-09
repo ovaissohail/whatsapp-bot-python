@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import os
 from ai_handler_graph import react_graph_memory, HumanMessage, get_conversation_messages
 from datetime import datetime
+import json
 
 app = Flask(__name__)
 
@@ -12,21 +13,35 @@ def home():
 @app.route('/process', methods=['POST'])
 def process_message():
     try:
-        # Handle either text message or voice note
-        if 'voice_note' in request.files:
-            voice_note = request.files['voice_note']
-            # Here we'll just get the content as text
-            message = "Voice note content here"  # This will be replaced with actual transcription
-        else:
-            message = request.json.get('message')
-            
-        phone_number = request.json.get('phone_number')
-        user_name = request.json.get('user_name')
+        # Parse webhook data
+        webhook_data = request.json
+        print(f"Received webhook data: {json.dumps(webhook_data, indent=2)}")
         
+        # Extract message details from webhook
+        entry = webhook_data.get('entry', [{}])[0]
+        changes = entry.get('changes', [{}])[0]
+        value = changes.get('value', {})
+        messages = value.get('messages', [{}])[0]
+        
+        # Get user info
+        contacts = value.get('contacts', [{}])[0]
+        user_name = contacts.get('profile', {}).get('name')
+        phone_number = messages.get('from')
+        
+        # Handle different message types
+        message_type = messages.get('type')
+        
+        if message_type == 'audio':
+            # For now, just acknowledge we received a voice note
+            audio_data = messages.get('audio', {})
+            message = f"[Voice Note Received]"
+        else:
+            message = messages.get('text', {}).get('body', '')
+            
         if not message or not phone_number:
             return jsonify({'error': 'Missing required fields'}), 400
         
-        # Process normally with the message (whether from text or voice)
+        # Process with existing logic
         state = {
             "messages": get_conversation_messages(phone_number),
             "thread_id": phone_number
