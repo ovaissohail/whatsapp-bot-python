@@ -10,3 +10,7 @@ langchain-openai
 langchain-community
 langchain-groq
 langchain-google-genai
+pathlib
+requests
+tempfile
+google.generativeai
