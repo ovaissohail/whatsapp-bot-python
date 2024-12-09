@@ -12,28 +12,29 @@ def home():
 @app.route('/process', methods=['POST'])
 def process_message():
     try:
-        webhook_data = request.json
-        print(f"Received webhook data: {webhook_data}")
+        data = request.json
+        print(f"Received webhook data: {data}")
         
-        # Extract message data
-        message_data = webhook_data['entry'][0]['changes'][0]['value']['messages'][0]
-        message_type = message_data.get('type')
-        phone_number = message_data.get('from')
-        
-        print(f"Message type: {message_type}")
-        print(f"Phone number: {phone_number}")
-        
-        # Get message content based on type
-        if message_type == 'text':
-            message = message_data['text']['body']
-        elif message_type == 'audio':
-            audio_id = message_data['audio']['id']
-            message = f"[Voice note ID: {audio_id}]"
-        else:
-            return jsonify({'error': 'Unsupported message type'}), 400
+        # Handle direct API calls
+        if 'phone_number' in data and 'message' in data:
+            phone_number = data['phone_number']
+            message = data['message']
+        # Handle WhatsApp webhook
+        elif 'entry' in data:
+            message_data = data['entry'][0]['changes'][0]['value']['messages'][0]
+            message_type = message_data.get('type')
+            phone_number = message_data.get('from')
             
-        print(f"Message content: {message}")
-        
+            if message_type == 'text':
+                message = message_data['text']['body']
+            elif message_type == 'audio':
+                audio_id = message_data['audio']['id']
+                message = f"[Voice note ID: {audio_id}]"
+            else:
+                return jsonify({'error': 'Unsupported message type'}), 400
+        else:
+            return jsonify({'error': 'Invalid request format'}), 400
+            
         # Process with existing logic
         state = {
             "messages": get_conversation_messages(phone_number),
