@@ -3,12 +3,16 @@ from pathlib import Path
 from tinytag import TinyTag
 from dotenv import load_dotenv
 import os
+import requests
+import tempfile
 
 load_dotenv()
 
 # Configure Google API
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
+
+WHATSAPP_API_TOKEN = os.getenv('WHATSAPP_API_TOKEN')
 
 def transcribe_voice_note(file_path: str, system_instructions: str = None) -> str:
     """
@@ -62,12 +66,42 @@ def transcribe_voice_note(file_path: str, system_instructions: str = None) -> st
         print(f"Error transcribing voice note: {str(e)}")
         return f"[Error transcribing voice note: {str(e)}]"
 
-def download_voice_note(url: str, file_path: str) -> bool:
+def download_voice_note(audio_id: str) -> str:
     """
-    Download a voice note from a URL and save it locally.
-    To be implemented when we handle WhatsApp voice note URLs.
+    Download a voice note from WhatsApp using the Media API
+    
+    Args:
+        audio_id (str): The WhatsApp audio ID
+        
+    Returns:
+        str: Path to the downloaded audio file
     """
-    pass
+    try:
+        # WhatsApp Media API endpoint
+        media_url = f"https://graph.facebook.com/v21.0/{audio_id}"
+        headers = {
+            'Authorization': f'Bearer {WHATSAPP_API_TOKEN}'
+        }
+        
+        # Get media URL
+        response = requests.get(media_url, headers=headers)
+        response.raise_for_status()
+        
+        # Download the audio file
+        audio_url = response.json().get('url')
+        audio_response = requests.get(audio_url, headers=headers)
+        audio_response.raise_for_status()
+        
+        # Save to temp file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.ogg')
+        temp_file.write(audio_response.content)
+        temp_file.close()
+        
+        return temp_file.name
+        
+    except Exception as e:
+        print(f"Error downloading voice note: {str(e)}")
+        return None
 
 if __name__ == "__main__":
     # Test the transcription

@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import os
 from ai_handler_graph import react_graph_memory, HumanMessage, get_conversation_messages
 from datetime import datetime
+from tools.voice_helper import download_voice_note, transcribe_voice_note
 
 app = Flask(__name__)
 
@@ -29,7 +30,16 @@ def process_message():
                 message = message_data['text']['body']
             elif message_type == 'audio':
                 audio_id = message_data['audio']['id']
-                message = f"[Voice note ID: {audio_id}]"
+                print(f"Processing voice note with ID: {audio_id}")
+                
+                # Download and transcribe
+                audio_file = download_voice_note(audio_id)
+                if audio_file:
+                    message = transcribe_voice_note(audio_file)
+                    # Clean up temp file
+                    os.unlink(audio_file)
+                else:
+                    message = "[Error processing voice note]"
             else:
                 return jsonify({'error': 'Unsupported message type'}), 400
         else:
