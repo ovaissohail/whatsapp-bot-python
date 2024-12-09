@@ -1,6 +1,5 @@
 import google.generativeai as genai
 from pathlib import Path
-from tinytag import TinyTag
 from dotenv import load_dotenv
 import os
 import requests
