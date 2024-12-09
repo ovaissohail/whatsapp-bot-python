@@ -36,6 +36,7 @@ def process_message():
                 audio_file = download_voice_note(audio_id)
                 if audio_file:
                     message = transcribe_voice_note(audio_file)
+                    print(f"Transcribed message: {message}")
                     # Clean up temp file
                     os.unlink(audio_file)
                 else:
