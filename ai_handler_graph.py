@@ -51,46 +51,55 @@ def save_conversations(conversations):
 def initialize_chat():
     openai_api_key = os.getenv("OPENAI_API_KEY")
     tools = [search_inventory]
-    llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
+    llm = ChatOpenAI(
+        model="gpt-4o",
+        api_key=openai_api_key,
+        temperature=0.7
+    )
     return llm.bind_tools(tools, parallel_tool_calls=False), tools
 
 def assistant(state: MessagesState):
-    # Get config from the graph's context
-    config = state.get("configurable", {})
-    thread_id = config.get("thread_id")
-    user_name = config.get("user_name")
-    
-    print(f"\nProcessing message:")
-    print(f"Thread ID: {thread_id}")
-    print(f"User Name: {user_name}")
-    print(f"State: {state}")
-    
-    if not thread_id:
-        raise ValueError(f"No thread_id in config: {config}")
-    
-    conversations = load_conversations()
-    
-    # Initialize or get conversation
-    if thread_id not in conversations:
-        conversations[thread_id] = {
-            "messages": [],
-            "user_name": user_name
-        }
-    
-    # Get historical messages
-    historical_messages = conversations[thread_id]["messages"]
-    
-    # Combine historical messages with new message
-    all_messages = historical_messages + state["messages"]
-    
-    # Get response from LLM
-    response = llm_with_tools.invoke([sys_msg] + all_messages)
-    
-    # Update conversation history
-    conversations[thread_id]["messages"] = all_messages + [response]
-    save_conversations(conversations)
-    
-    return {"messages": [response]}
+    try:
+        # Extract thread_id directly from state
+        thread_id = state["configurable"]["thread_id"]
+        user_name = state["configurable"].get("user_name")
+        
+        print(f"\nProcessing message:")
+        print(f"Thread ID: {thread_id}")
+        print(f"User Name: {user_name}")
+        print(f"Raw State: {state}")
+        
+        conversations = load_conversations()
+        
+        # Initialize conversation if needed
+        if thread_id not in conversations:
+            conversations[thread_id] = {
+                "messages": [],
+                "user_name": user_name
+            }
+        
+        historical_messages = conversations[thread_id]["messages"]
+        print(f"Historical messages: {historical_messages}")
+        
+        all_messages = historical_messages + state["messages"]
+        print(f"Combined messages: {all_messages}")
+        
+        response = llm_with_tools.invoke([sys_msg] + all_messages)
+        print(f"LLM Response: {response}")
+        
+        conversations[thread_id]["messages"] = all_messages + [response]
+        save_conversations(conversations)
+        
+        return {"messages": [response]}
+        
+    except KeyError as e:
+        print(f"KeyError in assistant: {e}")
+        print(f"State content: {state}")
+        raise ValueError(f"Missing required key in state: {e}")
+    except Exception as e:
+        print(f"Unexpected error in assistant: {e}")
+        print(f"State content: {state}")
+        raise
 
 def create_graph(llm_with_tools, tools):
     global sys_msg
