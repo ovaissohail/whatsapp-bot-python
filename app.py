@@ -16,32 +16,27 @@ def process_message():
         phone_number = data.get('phone_number')
         user_name = data.get('user_name')
         
-        if not message:
-            return jsonify({'error': 'No message provided'}), 400
-        if not phone_number:
-            return jsonify({'error': 'No phone number provided'}), 400
+        if not message or not phone_number:
+            return jsonify({'error': 'Missing required fields'}), 400
         
-        # Create the base state and config
-        base_state = {
+        # Create a MessagesState object
+        state = {
             "messages": [HumanMessage(content=message)],
-        }
-        
-        # Create config with all required fields
-        config = {
             "configurable": {
                 "thread_id": phone_number,
                 "checkpoint_id": phone_number,
                 "checkpoint_ns": "dealcart",
-                "user_name": user_name  # Move user_name to config
+                "user_name": user_name
             }
         }
         
-        print(f"Processing request - Phone: {phone_number}, Message: {message}")
-        print(f"State: {base_state}")
-        print(f"Config: {config}")
+        print(f"\nProcessing request:")
+        print(f"Phone: {phone_number}")
+        print(f"Message: {message}")
+        print(f"State: {state}")
         
-        # Pass state and config separately
-        response = react_graph_memory.invoke(base_state, config)
+        # Don't pass config separately, include it in state
+        response = react_graph_memory.invoke(state)
         
         # Extract the assistant's response
         ai_response = ""

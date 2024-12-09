@@ -14,133 +14,113 @@ from datetime import datetime
 
 load_dotenv()
 
-CONVERSATION_FILE = "graph_conversations.json"
+CONVERSATION_FILE = "conversations.json"
 
 def load_conversations():
     try:
         with open(CONVERSATION_FILE, 'r') as f:
-            conversations = json.load(f)
-            # Convert stored messages back to LangChain message objects
-            for thread_id in conversations:
-                messages = []
-                for msg in conversations[thread_id]["messages"]:
-                    if msg["role"] == "user":
-                        messages.append(HumanMessage(content=msg["content"]))
-                    elif msg["role"] == "assistant":
-                        messages.append(AIMessage(content=msg["content"]))
-                conversations[thread_id]["messages"] = messages
-            return conversations
+            return json.load(f)
     except:
         return {}
 
 def save_conversations(conversations):
-    # Convert LangChain message objects to serializable format
-    serializable_convos = {}
-    for thread_id, convo in conversations.items():
-        messages = []
-        for msg in convo["messages"]:
-            if isinstance(msg, HumanMessage):
-                messages.append({"role": "user", "content": msg.content})
-            elif isinstance(msg, AIMessage):
-                messages.append({"role": "assistant", "content": msg.content})
-        serializable_convos[thread_id] = {"messages": messages}
-    
     with open(CONVERSATION_FILE, 'w') as f:
-        json.dump(serializable_convos, f, indent=2)
+        json.dump(conversations, f, indent=2)
 
-def initialize_chat():
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    tools = [search_inventory]
-    llm = ChatOpenAI(
-        model="gpt-4o",
-        api_key=openai_api_key,
-        temperature=0.7
-    )
-    return llm.bind_tools(tools, parallel_tool_calls=False), tools
+def get_conversation_messages(phone_number):
+    conversations = load_conversations()
+    if phone_number in conversations:
+        # Convert stored messages back to LangChain message objects
+        messages = []
+        for msg in conversations[phone_number]["messages"]:
+            if msg["role"] == "user":
+                messages.append(HumanMessage(content=msg["content"]))
+            elif msg["role"] == "assistant":
+                messages.append(AIMessage(content=msg["content"]))
+        return messages
+    return []
 
+# Initialize LLM and tools
+tools = [search_inventory]
+llm = ChatOpenAI(model="gpt-4o")
+llm_with_tools = llm.bind_tools(tools)
+
+# System message
+sys_msg = SystemMessage(content="""You are a helpful assistant tasked with searching DealCart inventory for products.
+ALWAYS use the search_inventory tool when users ask about any products or ordering items.
+Do not respond without using the tool first.""")
+
+# Node
 def assistant(state: MessagesState):
     try:
-        # Extract thread_id directly from state
-        thread_id = state["configurable"]["thread_id"]
-        user_name = state["configurable"].get("user_name")
+        response = llm_with_tools.invoke([sys_msg] + state["messages"])
         
-        print(f"\nProcessing message:")
-        print(f"Thread ID: {thread_id}")
-        print(f"User Name: {user_name}")
-        print(f"Raw State: {state}")
+        # Save conversation
+        thread_id = state.get("thread_id")
+        if thread_id:
+            conversations = load_conversations()
+            if thread_id not in conversations:
+                conversations[thread_id] = {
+                    "first_interaction": datetime.now().isoformat(),
+                    "messages": []
+                }
+                
+            # Add the latest messages
+            if state["messages"]:
+                conversations[thread_id]["messages"].append({
+                    "role": "user",
+                    "content": state["messages"][-1].content,
+                    "timestamp": datetime.now().isoformat()
+                })
+            
+            conversations[thread_id]["messages"].append({
+                "role": "assistant",
+                "content": response.content,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            save_conversations(conversations)
         
-        conversations = load_conversations()
+        return {"messages": [response], "thread_id": thread_id}
         
-        # Initialize conversation if needed
-        if thread_id not in conversations:
-            conversations[thread_id] = {
-                "messages": [],
-                "user_name": user_name
-            }
-        
-        historical_messages = conversations[thread_id]["messages"]
-        print(f"Historical messages: {historical_messages}")
-        
-        all_messages = historical_messages + state["messages"]
-        print(f"Combined messages: {all_messages}")
-        
-        response = llm_with_tools.invoke([sys_msg] + all_messages)
-        print(f"LLM Response: {response}")
-        
-        conversations[thread_id]["messages"] = all_messages + [response]
-        save_conversations(conversations)
-        
-        return {"messages": [response]}
-        
-    except KeyError as e:
-        print(f"KeyError in assistant: {e}")
-        print(f"State content: {state}")
-        raise ValueError(f"Missing required key in state: {e}")
     except Exception as e:
-        print(f"Unexpected error in assistant: {e}")
-        print(f"State content: {state}")
+        print(f"Error in assistant: {e}")
         raise
 
-def create_graph(llm_with_tools, tools):
-    global sys_msg
-    sys_msg = SystemMessage(content="""
-                        You are a helpful assistant tasked with searching DealCart inventory for products,
-                        only return products that are available in the warehouse. 
-                        
-                        Pls make sure your search is generic in the case of multiple products with similar names. 
-                        And specific if the product is unique. Or the brand name is mentioned by the customer
-                        
-                        If you are looking for alternatives incase of unavailable inventory, try to use different search queries to ensure that you are not repeating the same search query.
-                        
-                        Important: Do not start every conversation with a generic greeting. Instead, respond directly to the user's query or message.""")
-    
-    builder = StateGraph(MessagesState)
-    builder.add_node("assistant", assistant)
-    builder.add_node("tools", ToolNode(tools))
-    builder.add_edge(START, "assistant")
-    builder.add_conditional_edges("assistant", tools_condition)
-    builder.add_edge("tools", "assistant")
-    
-    memory = MemorySaver()
-    return builder.compile(checkpointer=memory)
+# Create graph
+builder = StateGraph(MessagesState)
 
-# Initialize the graph
-llm_with_tools, tools = initialize_chat()
-react_graph_memory = create_graph(llm_with_tools, tools)
+# Define nodes
+builder.add_node("assistant", assistant)
+builder.add_node("tools", ToolNode(tools))
+
+# Define edges
+builder.add_edge(START, "assistant")
+builder.add_conditional_edges(
+    "assistant",
+    tools_condition,
+)
+builder.add_edge("tools", "assistant")
+
+# Create memory-enabled graph
+memory = MemorySaver()
+react_graph_memory = builder.compile(checkpointer=memory)
 
 if __name__ == "__main__":
     def chat_loop():
         print("\nWelcome to DealCart Assistant! (Type 'quit' to exit)")
         print("------------------------------------------------")
         
-        test_phone = "+923000000000"
-        config = {
-            "configurable": {
-                "thread_id": test_phone,
-                "checkpoint_id": test_phone,
-                "checkpoint_ns": "dealcart"
-            }
+        # Get phone number for thread_id
+        phone_number = input("Please enter your phone number: ").strip()
+        
+        # Initialize state with thread_id and load existing messages
+        state = {
+            "messages": get_conversation_messages(phone_number),
+            "thread_id": phone_number
         }
+        
+        config = {"configurable": {"thread_id": phone_number}}
         
         while True:
             user_input = input("\nYou: ").strip()
@@ -153,13 +133,18 @@ if __name__ == "__main__":
                 continue
                 
             try:
-                messages = [HumanMessage(content=user_input)]
-                response = react_graph_memory.invoke({"messages": messages}, config)
+                # Add new message to existing state
+                state["messages"].append(HumanMessage(content=user_input))
+                response = react_graph_memory.invoke(state, config)
+                
+                # Update state with response
+                state = response
                 
                 print("\nAssistant:", end=" ")
-                for message in reversed(response['messages']):
-                    if not isinstance(message, HumanMessage):
-                        print(message.content)
+                # Get the last AI message from the response
+                for m in reversed(response['messages']):
+                    if not isinstance(m, HumanMessage):
+                        print(m.content)
                         break
                     
             except Exception as e:
