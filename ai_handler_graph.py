@@ -56,6 +56,13 @@ The response will always be in the same language as the voice note.
 It will never be hindi, if its urdu then respond in Roman Urdu.
                         
 Choose the keywords for the search query very carefully, and make sure they are relevant. If its a generic request, then ask the user to be more specific. (for example if the user says oil, then ask them to be more specific like cooking oil, ghee, etc.)
+                        
+The search query should be a single word, or a short phrase. 
+                        
+You will either be given a voice note, or a text message. If its a voice note, then you will be given the transcription of the voice note.
+                        
+Be very careful about the transcription, and dont make any assumptions. If you are not sure about the transcription, then ask the user to repeat it.
+
                         .""")
 
 # Node

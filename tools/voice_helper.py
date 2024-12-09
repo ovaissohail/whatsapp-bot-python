@@ -36,6 +36,10 @@ def transcribe_voice_note(file_path: str, system_instructions: str = None) -> st
             2. Keep the original meaning and intent
             3. Format the text in a clear, readable way
             4. Maintain any key information or specific details mentioned
+
+            Try to exactly transcibe the audio, and dont make any assumptions. 
+            If you are not sure about the transcription, then ask the user to repeat it.
+
             """
             
         # Upload file to Gemini
