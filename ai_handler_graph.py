@@ -1,8 +1,8 @@
 from langchain_openai import ChatOpenAI
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from tools.dealcart_search import search_inventory
 from langgraph.graph import MessagesState
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.graph import START, StateGraph
 from langgraph.prebuilt import tools_condition
 from langgraph.prebuilt import ToolNode
@@ -19,13 +19,34 @@ CONVERSATION_FILE = "graph_conversations.json"
 def load_conversations():
     try:
         with open(CONVERSATION_FILE, 'r') as f:
-            return json.load(f)
+            conversations = json.load(f)
+            # Convert stored messages back to LangChain message objects
+            for thread_id in conversations:
+                messages = []
+                for msg in conversations[thread_id]["messages"]:
+                    if msg["role"] == "user":
+                        messages.append(HumanMessage(content=msg["content"]))
+                    elif msg["role"] == "assistant":
+                        messages.append(AIMessage(content=msg["content"]))
+                conversations[thread_id]["messages"] = messages
+            return conversations
     except:
         return {}
 
 def save_conversations(conversations):
+    # Convert LangChain message objects to serializable format
+    serializable_convos = {}
+    for thread_id, convo in conversations.items():
+        messages = []
+        for msg in convo["messages"]:
+            if isinstance(msg, HumanMessage):
+                messages.append({"role": "user", "content": msg.content})
+            elif isinstance(msg, AIMessage):
+                messages.append({"role": "assistant", "content": msg.content})
+        serializable_convos[thread_id] = {"messages": messages}
+    
     with open(CONVERSATION_FILE, 'w') as f:
-        json.dump(conversations, f, indent=2)
+        json.dump(serializable_convos, f, indent=2)
 
 def initialize_chat():
     openai_api_key = os.getenv("OPENAI_API_KEY")
@@ -33,7 +54,37 @@ def initialize_chat():
     llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
     return llm.bind_tools(tools, parallel_tool_calls=False), tools
 
+def assistant(state: MessagesState):
+    thread_id = state.get("configurable", {}).get("thread_id")
+    conversations = load_conversations()
+    
+    print(f"\nThread ID: {thread_id}")
+    print(f"Incoming message: {state['messages']}")
+    
+    # Initialize conversation if it doesn't exist
+    if thread_id not in conversations:
+        conversations[thread_id] = {"messages": []}
+    
+    # Get historical messages
+    historical_messages = conversations[thread_id]["messages"]
+    print(f"Historical messages: {historical_messages}")
+    
+    # Combine historical messages with new message
+    all_messages = historical_messages + state["messages"]
+    print(f"Combined messages: {all_messages}")
+    
+    # Get response from LLM
+    response = llm_with_tools.invoke([sys_msg] + all_messages)
+    print(f"LLM Response: {response}")
+    
+    # Update conversation history
+    conversations[thread_id]["messages"] = all_messages + [response]
+    save_conversations(conversations)
+    
+    return {"messages": [response]}
+
 def create_graph(llm_with_tools, tools):
+    global sys_msg
     sys_msg = SystemMessage(content="""
                         You are a helpful assistant tasked with searching DealCart inventory for products,
                         only return products that are available in the warehouse. 
@@ -41,29 +92,10 @@ def create_graph(llm_with_tools, tools):
                         Pls make sure your search is generic in the case of multiple products with similar names. 
                         And specific if the product is unique. Or the brand name is mentioned by the customer
                         
-                        If you are looking for alternatives incase of unavailable inventory, try to use different search queries to ensure that you are not repeating the same search query""")
+                        If you are looking for alternatives incase of unavailable inventory, try to use different search queries to ensure that you are not repeating the same search query.
+                        
+                        Important: Do not start every conversation with a generic greeting. Instead, respond directly to the user's query or message.""")
     
-    def assistant(state: MessagesState):
-        # Load conversation history for the thread_id
-        thread_id = state.get("configurable", {}).get("thread_id")
-        conversations = load_conversations()
-        
-        if thread_id in conversations:
-            # Add historical messages to the current state
-            historical_messages = conversations[thread_id].get("messages", [])
-            state["messages"].extend(historical_messages)
-        
-        response = {"messages": [llm_with_tools.invoke([sys_msg] + state["messages"])]}
-        
-        # Save the updated conversation
-        if thread_id:
-            if thread_id not in conversations:
-                conversations[thread_id] = {"messages": []}
-            conversations[thread_id]["messages"] = state["messages"] + response["messages"]
-            save_conversations(conversations)
-        
-        return response
-
     builder = StateGraph(MessagesState)
     builder.add_node("assistant", assistant)
     builder.add_node("tools", ToolNode(tools))
