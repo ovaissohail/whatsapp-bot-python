@@ -12,29 +12,16 @@ def home():
 @app.route('/process', methods=['POST'])
 def process_message():
     try:
-        # Parse webhook data
-        webhook_data = request.json
-        
-        # Extract message details from webhook
-        entry = webhook_data.get('entry', [{}])[0]
-        changes = entry.get('changes', [{}])[0]
-        value = changes.get('value', {})
-        messages = value.get('messages', [{}])[0]
-        
-        # Get user info
-        contacts = value.get('contacts', [{}])[0]
-        user_name = contacts.get('profile', {}).get('name')
-        phone_number = messages.get('from')
-        
-        # Handle different message types
-        message_type = messages.get('type')
-        
-        if message_type == 'audio':
-            # For now, just acknowledge we received a voice note
-            audio_data = messages.get('audio', {})
-            message = f"[Voice Note Received: {audio_data.get('id')}]"
+        # Handle either text message or voice note
+        if 'voice_note' in request.files:
+            voice_note = request.files['voice_note']
+            # Here we'll just get the content as text
+            message = "Voice note content here"  # This will be replaced with actual transcription
         else:
-            message = messages.get('text', {}).get('body', '')
+            message = request.json.get('message')
+            
+        phone_number = request.json.get('phone_number')
+        user_name = request.json.get('user_name')
         
         if not message or not phone_number:
             return jsonify({'error': 'Missing required fields'}), 400
@@ -50,7 +37,6 @@ def process_message():
         print(f"\nProcessing request:")
         print(f"Phone: {phone_number}")
         print(f"Name: {user_name}")
-        print(f"Message Type: {message_type}")
         print(f"Message: {message}")
         
         config = {"configurable": {"thread_id": phone_number}}
