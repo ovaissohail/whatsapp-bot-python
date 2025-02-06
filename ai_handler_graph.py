@@ -16,6 +16,7 @@ import json
 from datetime import datetime
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
+from tools.lat_long_helper import get_location_details
 
 load_dotenv()
 
@@ -48,7 +49,7 @@ def get_conversation_messages(phone_number):
     return []
 
 # Initialize LLM and tools
-tools = [search_inventory, create_cart, get_cart_status, checkout_cart]
+tools = [search_inventory, create_cart, get_cart_status, checkout_cart, get_location_details]
 llm = ChatOpenAI(model="gpt-4o-mini")
 #llm = ChatGroq(model="llama-3.3-70b-specdec")
 
@@ -74,12 +75,13 @@ You will either be given a voice note, or a text message. If its a voice note, t
 Be very careful about the transcription, and dont make any assumptions. If you are not sure about the transcription, then ask the user to repeat it.
 
 You have access to the following tools:
-- search_inventory
-- create_cart
-- get_cart_status
-- checkout_cart
+- search_inventory: Search for products in inventory
+- create_cart: Create a new shopping cart
+- get_cart_status: Check cart status
+- checkout_cart: Complete checkout (only with user permission)
+- get_location_details: Get address details from latitude/longitude coordinates
 
-You can only use the checkout_cart tool after taking explicit permission from the user.
+When handling location data, use get_location_details to provide formatted address information.
                         .""")
 
 # Node

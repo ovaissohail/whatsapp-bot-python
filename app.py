@@ -4,6 +4,7 @@ from ai_handler_graph import react_graph_memory, HumanMessage, get_conversation_
 from datetime import datetime
 from tools.voice_helper import download_voice_note, transcribe_voice_note
 from tools.image_helper import download_image, analyze_image
+from tools.lat_long_helper import get_location_details
 
 app = Flask(__name__)
 
@@ -45,7 +46,8 @@ def process_message():
             location_data = data.get('location', {})
             latitude = location_data.get('latitude')
             longitude = location_data.get('longitude')
-            message = f"Location: {latitude}, {longitude}"
+            
+            message = f"Location received - Latitude: {latitude}, Longitude: {longitude}"
 
         elif message_type == 'image':
             image_data = data.get('imageData', {})

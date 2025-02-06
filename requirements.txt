@@ -13,3 +13,4 @@ langchain-google-genai
 pathlib
 requests
 google.generativeai
+geopy
