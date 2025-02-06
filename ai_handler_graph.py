@@ -87,7 +87,6 @@ def assistant(state: MessagesState, config: Dict[str, Any] = None):
     try:
         # Limit incoming messages to last 5
         #state["messages"] = state["messages"][-5:]
-        print(f"State: {state['messages']}")
         response = llm_with_tools.invoke([sys_msg] + state["messages"])
         
         thread_id = config.get("configurable", {}).get("thread_id")

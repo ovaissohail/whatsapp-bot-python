@@ -50,13 +50,16 @@ def process_message():
         elif message_type == 'image':
             image_data = data.get('imageData', {})
             image_id = image_data.get('id')
-            print(f"Processing image with ID: {image_id}")
+            caption = image_data.get('caption', '')  # Get caption if it exists
+            print(f"Processing image with ID: {image_id}, Caption: {caption}")
             
             # Download and analyze
             image_file = download_image(image_id)
             if image_file:
                 print(f"Image downloaded to: {image_file}")
                 message = analyze_image(image_file)
+                if caption:
+                    message = f"Caption: {caption}\n\nImage Analysis: {message}"
                 print(f"Image analysis result: {message}")
                 # Clean up temp file
                 os.unlink(image_file)
