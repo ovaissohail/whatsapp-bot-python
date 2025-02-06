@@ -47,7 +47,7 @@ def transcribe_voice_note(file_path: str, system_instructions: str = None) -> st
         
         # Initialize Gemini model
         model = genai.GenerativeModel(
-            "gemini-1.5-flash",
+            "gemini-2.0-flash-lite-preview-02-05",
             system_instruction=system_instructions
         )
         
