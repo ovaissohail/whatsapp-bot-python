@@ -31,7 +31,7 @@ def transcribe_voice_note(file_path: str, system_instructions: str = None) -> st
         # Default system instructions if none provided
         if not system_instructions:
             system_instructions = """
-            You are a voice transcription assistant. Please:
+            You are a voice transcription assistant for a WhatsApp bot that takes orders for a grocery quick commerce. Please:
             1. Transcribe the audio accurately
             2. Keep the original meaning and intent
             3. Format the text in a clear, readable way
@@ -39,6 +39,8 @@ def transcribe_voice_note(file_path: str, system_instructions: str = None) -> st
 
             Try to exactly transcibe the audio, and dont make any assumptions. 
             If you are not sure about the transcription, then ask the user to repeat it.
+
+            Return the results in either English or Roman Urdu. The results will be used by another llm to take an action.
 
             """
             

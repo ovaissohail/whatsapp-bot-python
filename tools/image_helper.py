@@ -35,6 +35,7 @@ def analyze_image(file_path: str, system_instructions: str = None) -> str:
             1. Extract any text visible in the image (OCR)
             2. You are part of a WhatsApp bot that takes orders for a grocery quick commerce.
             3. You are only to respond with the text extracted from the image, text that is relevant to the order.
+            4. Return the results in either English or Roman Urdu. The results will be used by another llm to take an action.
 
 
             If the image is unclear or text is not readable, please indicate that.
