@@ -3,6 +3,7 @@ import os
 from ai_handler_graph import react_graph_memory, HumanMessage, get_conversation_messages
 from datetime import datetime
 from tools.voice_helper import download_voice_note, transcribe_voice_note
+from tools.image_helper import download_image, analyze_image
 
 app = Flask(__name__)
 
@@ -23,6 +24,7 @@ def process_message():
         # Handle different message types
         if message_type == 'text':
             message = data.get('message', '')
+            
         elif message_type == 'audio':
             audio_data = data.get('audioData', {})
             audio_id = audio_data.get('id')
@@ -38,9 +40,33 @@ def process_message():
                 os.unlink(audio_file)
             else:
                 message = "[Error processing voice note]"
+        
+        elif message_type == 'location':
+            location_data = data.get('location', {})
+            latitude = location_data.get('latitude')
+            longitude = location_data.get('longitude')
+            message = f"Location: {latitude}, {longitude}"
+
+        elif message_type == 'image':
+            image_data = data.get('imageData', {})
+            image_id = image_data.get('id')
+            print(f"Processing image with ID: {image_id}")
+            
+            # Download and analyze
+            image_file = download_image(image_id)
+            if image_file:
+                print(f"Image downloaded to: {image_file}")
+                message = analyze_image(image_file)
+                print(f"Image analysis result: {message}")
+                # Clean up temp file
+                os.unlink(image_file)
+            else:
+                message = "[Error processing image]"
+        
         else:
             return jsonify({'error': 'Unsupported message type'}), 400
             
+
         if not phone_number:
             return jsonify({'error': 'Missing phone number'}), 400
             

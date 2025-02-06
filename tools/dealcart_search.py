@@ -1,10 +1,11 @@
 import requests
 from typing import Optional, Dict, Any
 from tools.dealcart_search_helper import extract_product_info
-
-
+from langchain_core.tools import tool
+@tool
 def search_inventory (search_term: str) -> Dict[str, Any]:
     """Search DealCart inventory for products.
+
 
     Args:
         search_term: Term to search for in product names
@@ -16,13 +17,13 @@ def search_inventory (search_term: str) -> Dict[str, Any]:
     Raises:
         requests.RequestException: If the API call fails
     """
-    base_url = "https://api.dealcart.io/api/consumer/products/pricing"
+    base_url = "https://api-staging.dealcart.io/api/consumer/products/pricing"
     
     params = {
         "name": search_term,
         "warehouse_id": 1,
         "page": 1,
-        "limit": 15
+        "limit": 6
     }
     
     try:

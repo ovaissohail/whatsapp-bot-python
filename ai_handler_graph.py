@@ -1,6 +1,9 @@
 from langchain_openai import ChatOpenAI
 from typing import Optional, Dict, Any, List
 from tools.dealcart_search import search_inventory
+from tools.dealcart_cart_info import get_cart_status
+from tools.dealcart_cartcreate import create_cart
+from tools.dealcart_cartcheckout import checkout_cart
 from langgraph.graph import MessagesState
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.graph import START, StateGraph
@@ -11,6 +14,8 @@ from dotenv import load_dotenv
 import os
 import json
 from datetime import datetime
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_groq import ChatGroq
 
 load_dotenv()
 
@@ -32,7 +37,9 @@ def get_conversation_messages(phone_number):
     if phone_number in conversations:
         # Convert stored messages back to LangChain message objects
         messages = []
-        for msg in conversations[phone_number]["messages"]:
+        stored_messages = conversations[phone_number]["messages"]
+        # Only take the last 5 messages
+        for msg in stored_messages[-5:]:
             if msg["role"] == "user":
                 messages.append(HumanMessage(content=msg["content"]))
             elif msg["role"] == "assistant":
@@ -41,12 +48,15 @@ def get_conversation_messages(phone_number):
     return []
 
 # Initialize LLM and tools
-tools = [search_inventory]
-llm = ChatOpenAI(model="gpt-4o")
+tools = [search_inventory, create_cart, get_cart_status, checkout_cart]
+llm = ChatOpenAI(model="gpt-4o-mini")
+#llm = ChatGroq(model="llama-3.3-70b-specdec")
+
 llm_with_tools = llm.bind_tools(tools)
 
 # System message
-sys_msg = SystemMessage(content="""You are a helpful assistant tasked with searching DealCart inventory for products.
+sys_msg = SystemMessage(content="""
+You are a helpful assistant tasked with searching DealCart inventory for products.
 ALWAYS use the search_inventory tool when users ask about any products or ordering items.
 
 If there is an item that is out of stock, search for an item that is similar and suggest it to the user. (for example all cooking oils are out of stock, then suggest ghee since it is similar)
@@ -63,17 +73,29 @@ You will either be given a voice note, or a text message. If its a voice note, t
                         
 Be very careful about the transcription, and dont make any assumptions. If you are not sure about the transcription, then ask the user to repeat it.
 
+You have access to the following tools:
+- search_inventory
+- create_cart
+- get_cart_status
+- checkout_cart
+
+You can only use the checkout_cart tool after taking explicit permission from the user.
                         .""")
 
 # Node
-def assistant(state: MessagesState):
+def assistant(state: MessagesState, config: Dict[str, Any] = None):
     try:
+        # Limit incoming messages to last 5
+        #state["messages"] = state["messages"][-5:]
+        print(f"State: {state['messages']}")
         response = llm_with_tools.invoke([sys_msg] + state["messages"])
         
-        # Save conversation
-        thread_id = state.get("thread_id")
+        thread_id = config.get("configurable", {}).get("thread_id")
+        print(f"Thread ID from state: {thread_id}")
+        
         if thread_id:
             conversations = load_conversations()
+            
             if thread_id not in conversations:
                 conversations[thread_id] = {
                     "first_interaction": datetime.now().isoformat(),
@@ -136,6 +158,7 @@ if __name__ == "__main__":
             "thread_id": phone_number
         }
         
+        print(f"Initial state: {state}")
         config = {"configurable": {"thread_id": phone_number}}
         
         while True:
@@ -151,18 +174,26 @@ if __name__ == "__main__":
             try:
                 # Add new message to existing state
                 state["messages"].append(HumanMessage(content=user_input))
+                # Keep only last 5 messages in state
+                if len(state["messages"]) > 5:
+                    state["messages"] = state["messages"][-5:]
+
+                print(f"State: {state}")
+                
                 response = react_graph_memory.invoke(state, config)
+                # Update state while preserving thread_id and keeping last 5 messages
+                state = {
+                    "messages": response["messages"][-5:],  # Keep only last 5 messages
+                    "thread_id": phone_number
+                }
                 
-                # Update state with response
-                state = response
-                
-                print("\nAssistant:", end=" ")
+                print("\nA:", end=" ")
                 # Get the last AI message from the response
                 for m in reversed(response['messages']):
                     if not isinstance(m, HumanMessage):
                         print(m.content)
                         break
-                    
+                        
             except Exception as e:
                 print(f"\nError: Something went wrong - {str(e)}")
                 print("Please try again.")
