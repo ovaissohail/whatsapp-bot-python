@@ -31,7 +31,9 @@ def search_inventory (search_term: str) -> Dict[str, Any]:
     Raises:
         requests.RequestException: If the API call fails
     """
-    base_url = "https://api.dealcart.io/api/consumer/products/pricing"
+    base_url_staging = "https://api-staging.dealcart.io/api/consumer/products/pricing"
+    base_url_production = "https://api.dealcart.io/api/consumer/products/pricing"
+
     
     params = {
         "name": search_term,
@@ -41,7 +43,7 @@ def search_inventory (search_term: str) -> Dict[str, Any]:
     }
     
     try:
-        response = requests.get(base_url, params=params)
+        response = requests.get(base_url_production, params=params)
         response.raise_for_status()  # Raise exception for bad status codes
 
         data = response.json()

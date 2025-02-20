@@ -13,11 +13,19 @@ def create_cart(items: str) -> str:
     Returns:
         A string indicating if cart creation was successful
     """
-    base_url = "https://api-staging.dealcart.io/api/integration/cart/create"
+    base_url_staging = "https://api-staging.dealcart.io/api/integration/cart/create"
+    base_url_production = "https://api.dealcart.io/api/integration/cart/create"
     
-    headers = {
+    headers_staging = {
         'dc-phone-number': '03310000290',
         'dc-api-key': 'xy@dealc@rt',
+        'warehouse': '1',
+        'Content-Type': 'application/json'
+    }
+    
+    headers_production = {
+        'dc-phone-number': '03310000290',
+        'dc-api-key': '8fbc1214-d82d-41ee-9698-fd4f9c108772',
         'warehouse': '1',
         'Content-Type': 'application/json'
     }
@@ -34,7 +42,7 @@ def create_cart(items: str) -> str:
                     "quantity": int(quantity.strip())
                 })
         
-        response = requests.post(base_url, json=items_list, headers=headers)
+        response = requests.post(base_url_production, json=items_list, headers=headers_production)
         response.raise_for_status()
         
         result = response.json()

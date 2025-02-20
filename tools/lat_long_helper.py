@@ -35,4 +35,14 @@ def get_location_details(latitude: float, longitude: float) -> Dict[str, str]:
         "city": "N/A",
         "street_address": "N/A",
         "area": "N/A"
-    } 
+    }
+
+if __name__ == "__main__":
+    # Test coordinates (New York City, Times Square)
+    test_lat = 24.82566
+    test_long = 67.03785
+    print(f"Testing coordinates: ({test_lat}, {test_long})")
+    result = get_location_details(test_lat, test_long)
+    print("\nLocation Details:")
+    for key, value in result.items():
+        print(f"{key}: {value}") 

@@ -1,10 +1,8 @@
 from flask import Flask, request, jsonify
 import os
-from ai_handler_graph import react_graph_memory, HumanMessage, get_conversation_messages
+from ai_handler_graph_2 import react_graph_memory, HumanMessage, ToolMessage
 from datetime import datetime
 from tools.voice_helper import download_voice_note, transcribe_voice_note
-from tools.image_helper import download_image, analyze_image
-from tools.lat_long_helper import get_location_details
 from handlers.image_handler import handle_image_processing
 
 app = Flask(__name__)
@@ -56,7 +54,7 @@ def process_message():
             caption = image_data.get('caption', '')  # Get caption if it exists
             print(f"Processing image with ID: {image_id}, Caption: {caption}")
 
-            message = handle_image_processing(image_data, phone_number, caption)
+            message = handle_image_processing(image_data, phone_number, caption)    
             
             # # Download and analyze
             # image_file = download_image(image_id)
@@ -80,7 +78,7 @@ def process_message():
             
         # Process with existing logic
         state = {
-            "messages": get_conversation_messages(phone_number),
+            "messages": [],
             "thread_id": phone_number
         }
         
@@ -89,16 +87,73 @@ def process_message():
         config = {"configurable": {"thread_id": phone_number}}
         response = react_graph_memory.invoke(state, config)
         
+        # Check for interrupted state (sensitive tools)
+        snapshot = react_graph_memory.get_state(config)
+        if snapshot.next:
+            # Return special response for checkout confirmation
+            return jsonify({
+                'reply': "Checkout confirm karne ke lye 'yes' likhai:",
+                'requires_confirmation': True,
+                'state': 'awaiting_checkout'
+            })
+        
         ai_response = ""
         for m in reversed(response['messages']):
             if not isinstance(m, HumanMessage):
                 ai_response = m.content
                 break
                 
-        return jsonify({'reply': ai_response})
+        return jsonify({
+            'reply': ai_response,
+            'requires_confirmation': False
+        })
         
     except Exception as e:
         print(f"Error processing message: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Add new endpoint to handle confirmation responses
+@app.route('/process_confirmation', methods=['POST'])
+def process_confirmation():
+    try:
+        data = request.json
+        phone_number = data.get('phone_number')
+        user_input = data.get('message', '').strip().lower()
+        
+        if not phone_number:
+            return jsonify({'error': 'Missing phone number'}), 400
+            
+        config = {"configurable": {"thread_id": phone_number}}
+        
+        if user_input == "yes":
+            response = react_graph_memory.invoke(None, config)
+        else:
+            response = react_graph_memory.invoke(
+                {
+                    "messages": [
+                        ToolMessage(
+                            tool_call_id=react_graph_memory.get_state(config).messages[-1].tool_calls[0]["id"],
+                            content=f"API call denied by user. Reasoning: '{user_input}'. Continue assisting, accounting for the user's input.",
+                        )
+                    ],
+                    "thread_id": phone_number
+                },
+                config,
+            )
+        
+        ai_response = ""
+        for m in reversed(response['messages']):
+            if not isinstance(m, HumanMessage):
+                ai_response = m.content
+                break
+                
+        return jsonify({
+            'reply': ai_response,
+            'requires_confirmation': False
+        })
+        
+    except Exception as e:
+        print(f"Error processing confirmation: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

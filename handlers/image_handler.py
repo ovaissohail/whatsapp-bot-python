@@ -1,5 +1,6 @@
 from flask import jsonify
 from tools.image_helper import download_image, analyze_image
+import os
 
 def handle_image_processing(image_data, phone_number, caption):
     # First, send immediate acknowledgment
