@@ -76,36 +76,58 @@ def process_message():
         if not phone_number:
             return jsonify({'error': 'Missing phone number'}), 400
             
-        # Process with existing logic
-        state = {
-            "messages": [],
-            "thread_id": phone_number
-        }
-        
-        state["messages"].append(HumanMessage(content=message))
-        
         config = {"configurable": {"thread_id": phone_number}}
-        response = react_graph_memory.invoke(state, config)
         
-        # Check for interrupted state (sensitive tools)
+        # Check if this is a confirmation response
         snapshot = react_graph_memory.get_state(config)
-        if snapshot.next:
-            # Return special response for checkout confirmation
-            return jsonify({
-                'reply': "Checkout confirm karne ke lye 'yes' likhai:",
-                'requires_confirmation': True,
-                'state': 'awaiting_checkout'
-            })
+        if snapshot and snapshot.next:
+            if message.strip().lower() == "yes":
+                response = react_graph_memory.invoke(None, config)
+                # Get AI response after confirmation
+                ai_response = ""
+                for m in reversed(response['messages']):
+                    if not isinstance(m, HumanMessage):
+                        ai_response = m.content
+                        break
+                return jsonify({
+                    'reply': ai_response,
+                    'requires_confirmation': False
+                })
+            else:
+                tool_call_id = snapshot.messages[-1].tool_calls[0].get("id", "default_id")
+                response = react_graph_memory.invoke(
+                    {
+                        "messages": [
+                            ToolMessage(
+                                tool_call_id=str(tool_call_id),
+                                content=f"API call denied by user. Reasoning: '{message}'. Continue assisting, accounting for the user's input.",
+                            )
+                        ]
+                    },
+                    config,
+                )
+        else:
+            # Normal message processing
+            messages = [HumanMessage(content=message)]
+            response = react_graph_memory.invoke({"messages": messages}, config)
         
+        # Check for new interrupted state
+        snapshot = react_graph_memory.get_state(config)
+        requires_confirmation = bool(snapshot and snapshot.next)
+        
+        # Get AI response
         ai_response = ""
         for m in reversed(response['messages']):
             if not isinstance(m, HumanMessage):
                 ai_response = m.content
                 break
+        
+        if requires_confirmation:
+            ai_response = "Checkout confirm karne ke lye 'yes' likhai:"
                 
         return jsonify({
             'reply': ai_response,
-            'requires_confirmation': False
+            'requires_confirmation': requires_confirmation
         })
         
     except Exception as e:
@@ -135,8 +157,7 @@ def process_confirmation():
                             tool_call_id=react_graph_memory.get_state(config).messages[-1].tool_calls[0]["id"],
                             content=f"API call denied by user. Reasoning: '{user_input}'. Continue assisting, accounting for the user's input.",
                         )
-                    ],
-                    "thread_id": phone_number
+                    ]
                 },
                 config,
             )
