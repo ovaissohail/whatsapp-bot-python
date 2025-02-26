@@ -3,6 +3,7 @@ import os
 #from ai_handler_graph_2 import react_graph_memory, HumanMessage, ToolMessage
 from handlers.message_router import route_message
 from ai_handler_graph_3 import llm_chat, sys_message_chat, react_graph_memory, HumanMessage, ToolMessage
+from tools.local_cart_tools import set_current_user_id
 
 app = Flask(__name__)
 
@@ -25,6 +26,11 @@ def process_message():
         
         if not data.get('phone_number'):
             return jsonify({'error': 'Missing phone number'}), 400
+        
+        # Set the current user ID for cart operations
+        phone_number = data.get('phone_number')
+        set_current_user_id(phone_number)
+        print(f"Set current user ID to: {phone_number}")
             
         try:
             message_result = route_message(data)
@@ -33,7 +39,7 @@ def process_message():
             message_result = "[Error processing message. Please try again.]"
         
         # Define config here so it's available for all code paths
-        config = {"configurable": {"thread_id": data.get('phone_number')}}
+        config = {"configurable": {"thread_id": phone_number}}
         
         # Check if we have an immediate response
         if isinstance(message_result, dict) and 'immediate_response' in message_result:

@@ -36,8 +36,8 @@ safe_tools = [search_inventory, create_cart, get_cart_status, get_location_detai
 sensitive_tools = [checkout_cart]
 sensitive_tool_name = ["checkout_cart"]
 
-# llm = ChatOpenAI(model="gpt-4o-mini")
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite-preview-02-05")
+llm = ChatOpenAI(model="gpt-4o-mini")
+#llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite-preview-02-05")
 llm_with_tools = llm.bind_tools(safe_tools+sensitive_tools)
 
 # System message

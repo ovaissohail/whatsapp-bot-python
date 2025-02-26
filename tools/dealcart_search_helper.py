@@ -10,9 +10,10 @@ def extract_product_info(data):
                     "id": product["id"],
                     "name": product["name"],
                     "discountedPrice": product["groupRanges"][0]["discountedPrice"],
-                    "quantity": product["inventories"][0]["quantity"],
+                    "quantity": product["inventories"][0]["dcImsQuantityAvailable"],
                     "productPurchaseLimit":product["productPurchaseLimit"],
-                    
+                    "ProductDescription":product["description"]
+
                 }
                 
         simplified_products.append(info)

@@ -23,6 +23,7 @@ from langgraph.graph.message import add_messages
 from langchain_core.messages import ToolMessage
 from langchain_groq import ChatGroq
 from langgraph.types import interrupt
+from tools.local_cart_tools import add_to_cart, remove_from_cart, view_cart, clear_cart, finalize_cart
 
 
 load_dotenv()
@@ -34,7 +35,17 @@ class State(TypedDict):
     messages: Annotated[list, add_messages]
 
 # Initialize LLM and tools
-safe_tools = [search_inventory, create_cart, get_cart_status, get_location_details]
+safe_tools = [
+    search_inventory, 
+    create_cart, 
+    get_cart_status, 
+    get_location_details,
+    add_to_cart,
+    remove_from_cart,
+    view_cart,
+    clear_cart,
+    finalize_cart
+]
 sensitive_tools = [checkout_cart]
 
 sensitive_tool_name = ["checkout_cart"]
