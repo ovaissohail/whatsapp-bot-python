@@ -8,6 +8,7 @@ openai==1.64.0
 langchain==0.3.19  # For LLM application framework
 langchain-openai==0.3.7  # OpenAI integration for LangChain
 langgraph==0.2.74  # For conversation flows (remove if not using)
+langchain_groq
 
 #langchain-google-genai
 langchain-google-genai
