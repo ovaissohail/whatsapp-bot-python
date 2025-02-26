@@ -1,2 +1,23 @@
-venv/\n__pycache__/\n.env
+# Ignore all Python cache files
+*.pyc
+**/*.pyc
+*/__pycache__/
+**/__pycache__/
+
+# Ignore compiled Python files
+*.py[cod]
+*$py.class
+
+# Ignore virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Ignore local configuration
 .env
+
+# Ignore specific directories that contain generated files
+handlers/__pycache__/
+tools/__pycache__/
+prompts/__pycache__/
