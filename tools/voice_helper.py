@@ -61,7 +61,7 @@ def transcribe_voice_note(file_path: str, system_instructions: str = None) -> st
                 max_output_tokens=8192
             )
         )
-        
+        print("Voice has been transcribed")
         # Extract transcribed text
         transcribed_text = result.candidates[0].content.parts[0].text
         
@@ -86,24 +86,50 @@ def download_voice_note(audio_id: str) -> str:
             'Authorization': f'Bearer {WHATSAPP_API_TOKEN}'
         }
         
+        # Print the exact request we're making
+        print(f"Making request to: {media_url}")
+        print(f"With headers: Authorization: Bearer {WHATSAPP_API_TOKEN[:5]}...{WHATSAPP_API_TOKEN[-5:]}")
+        
         # Get media URL
         response = requests.get(media_url, headers=headers)
-        response.raise_for_status()
+        print(f"Media URL response status: {response.status_code}")
+        
+        if response.status_code != 200:
+            print(f"Error response: {response.text}")
+            return None
+            
+        response_data = response.json()
+        print(f"Media URL response data: {response_data}")
         
         # Download the audio file
-        audio_url = response.json().get('url')
+        audio_url = response_data.get('url')
+        if not audio_url:
+            print("No URL in response")
+            return None
+            
+        print(f"Downloading from URL: {audio_url}")
+        
+        # IMPORTANT: For the second request, we need the same headers
         audio_response = requests.get(audio_url, headers=headers)
-        audio_response.raise_for_status()
+        print(f"Audio download status: {audio_response.status_code}")
+        
+        if audio_response.status_code != 200:
+            print(f"Error downloading audio: {audio_response.text}")
+            return None
         
         # Save to temp file
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.ogg')
         temp_file.write(audio_response.content)
         temp_file.close()
+        print(f"Audio saved to: {temp_file.name}, size: {len(audio_response.content)} bytes")
         
         return temp_file.name
         
     except Exception as e:
         print(f"Error downloading voice note: {str(e)}")
+        if hasattr(e, 'response') and e.response:
+            print(f"Response status: {e.response.status_code}")
+            print(f"Response text: {e.response.text}")
         return None
 
 if __name__ == "__main__":
