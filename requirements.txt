@@ -1,19 +1,18 @@
-Flask
+# Web framework
+Flask==3.1.0
 python-dotenv==1.0.0
-gunicorn
-Werkzeug
-openai
-jq
-langchain
-langgraph
-langchain-openai
-langchain-community
-langchain-groq
-langchain-google-genai
-pathlib
-requests
-google.generativeai
-geopy
-pymongo==4.6.1
-sentence-transformers
-einops
+gunicorn==23.0.0
+
+# AI/LLM integration
+openai==1.64.0
+langchain==0.3.19  # For LLM application framework
+langchain-openai==0.3.7  # OpenAI integration for LangChain
+langgraph==0.2.74  # For conversation flows (remove if not using)
+
+# Utilities
+pathlib==1.0.1  # File path handling
+requests==2.32.3  # HTTP requests
+geopy==2.4.1  # Geolocation utilities
+
+# Database
+pymongo==4.6.1  # MongoDB client
