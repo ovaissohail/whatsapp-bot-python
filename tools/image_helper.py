@@ -50,7 +50,7 @@ def analyze_image(file_path: str, system_instructions: str = None) -> str:
         
         # Initialize Gemini model
         model = genai.GenerativeModel(
-            "gemini-2.0-flash-lite-preview-02-05",
+            "gemini-2.0-flash-lite",
             system_instruction=system_instructions
         )
         
