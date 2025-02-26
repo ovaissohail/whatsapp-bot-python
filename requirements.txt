@@ -18,3 +18,7 @@ geopy==2.4.1  # Geolocation utilities
 
 # Database
 pymongo==4.6.1  # MongoDB client
+
+# Google API
+google-generativeai
+
