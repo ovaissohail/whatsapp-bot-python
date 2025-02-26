@@ -3,17 +3,7 @@ from tools.image_helper import download_image, analyze_image
 import os
 
 def handle_image_processing(image_data, phone_number, caption):
-    # First, send immediate acknowledgment
-
-    immediate_response = {
-        'reply': "I'm analyzing your image, please give me a moment...",
-        'immediate': True  # Flag to indicate this is an immediate response
-    }
-    
-    # Send immediate response
-    jsonify(immediate_response)
-    
-    # Then continue with normal image processing
+    # Process the image (no need for immediate response handling here)
     image_id = image_data.get('id')
     print(f"Processing image with ID: {image_id}, Caption: {caption}")
     

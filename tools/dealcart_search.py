@@ -24,7 +24,7 @@ def search_inventory (search_term: str) -> Dict[str, Any]:
         "name": search_term,
         "warehouse_id": 1,
         "page": 1,
-        "limit": 6
+        "limit": 10
     }
     
     try:
