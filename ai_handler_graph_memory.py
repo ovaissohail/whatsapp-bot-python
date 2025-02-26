@@ -20,7 +20,6 @@ from langchain_core.messages import ToolMessage
 from database.memory_store import ConversationMemoryStore
 from tools.lat_long_helper import get_location_details
 from langchain_core.messages import RemoveMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 load_dotenv()

@@ -9,6 +9,8 @@ langchain==0.3.19  # For LLM application framework
 langchain-openai==0.3.7  # OpenAI integration for LangChain
 langgraph==0.2.74  # For conversation flows (remove if not using)
 
+#langchain-google-genai
+langchain-google-genai
 # Utilities
 pathlib==1.0.1  # File path handling
 requests==2.32.3  # HTTP requests
